@@ -1,5 +1,5 @@
 import { useState, createContext, useContext } from "react";
-import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
+import { HashRouter as BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
