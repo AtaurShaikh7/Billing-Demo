@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getStudents, addStudent, FEE_STRUCTURE, STREAMS, CLASSES } from "../data/students";
 import { useTheme } from "../App";
 import { tok } from "../theme";
+import * as XLSX from "xlsx";
 
 const NUM = { fontFamily: "'Roboto', sans-serif" };
 function fmt(n) { return "₹" + n.toLocaleString("en-IN"); }
@@ -240,6 +241,48 @@ function AddStudentModal({ onClose, onAdded, T }) {
 }
 
 /* ══ STUDENTS PAGE ══ */
+/* ══ EXCEL EXPORT ══ */
+function exportIDCardExcel(students) {
+  const wb = XLSX.utils.book_new();
+
+  const categories = [
+    { label: "FY Science",   filter: s => s.class === "FY (11th)" && s.stream === "Science" },
+    { label: "FY Commerce",  filter: s => s.class === "FY (11th)" && s.stream === "Commerce" },
+    { label: "FY Arts",      filter: s => s.class === "FY (11th)" && s.stream === "Arts" },
+    { label: "SY Science",   filter: s => s.class === "SY (12th)" && s.stream === "Science" },
+    { label: "SY Commerce",  filter: s => s.class === "SY (12th)" && s.stream === "Commerce" },
+    { label: "SY Arts",      filter: s => s.class === "SY (12th)" && s.stream === "Arts" },
+  ];
+
+  categories.forEach(({ label, filter }) => {
+    const rows = students.filter(filter).map((s, i) => ({
+      "Sr. No.":        i + 1,
+      "Student ID":     s.id,
+      "Roll Number":    s.rollNo,
+      "Full Name":      s.name,
+      "Class":          s.class,
+      "Stream":         s.stream,
+      "Date of Birth":  s.dob,
+      "Mobile":         s.phone,
+      "Email":          s.email,
+      "Address":        s.address,
+      "Enrolled On":    s.enrolledOn || "Jun 2025",
+      "Fee Status":     s.status,
+    }));
+
+    if (rows.length === 0) rows.push({ "Sr. No.": "No students in this category" });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      {wch:6},{wch:12},{wch:14},{wch:22},{wch:12},{wch:10},
+      {wch:14},{wch:13},{wch:28},{wch:30},{wch:14},{wch:12},
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, label);
+  });
+
+  XLSX.writeFile(wb, `StMary_IDCard_Data_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 const DEPT_OPT   = ["All Departments","Science","Commerce","Arts"];
 const STATUS_OPT = ["All Status","Active","On Leave","Overdue"];
 const S_REV      = {"Active":"Paid","On Leave":"Partial","Overdue":"Pending"};
@@ -287,10 +330,23 @@ export default function Students() {
           <h2 style={{ fontSize:32,fontWeight:800,color:T.indigo,margin:0,letterSpacing:"-.02em",lineHeight:1.2 }}>Students Directory</h2>
           <p style={{ fontSize:16,color:T.muted,marginTop:4 }}>Manage and monitor academic records across departments.</p>
         </div>
-        <button onClick={()=>setShowModal(true)} style={{ display:"flex",alignItems:"center",gap:8,background:T.text,color:dark?"#0d0f1a":"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:18,height:18}}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-          Register New Student
-        </button>
+        <div style={{ display:"flex",gap:10 }}>
+          <button
+            onClick={() => exportIDCardExcel(students)}
+            title="Export category-wise Excel for ID card printing"
+            style={{ display:"flex",alignItems:"center",gap:8,background:T.surface,color:T.indigo,border:`1.5px solid ${T.indigo}`,borderRadius:8,padding:"9px 18px",fontSize:13.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:16,height:16}}>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <path d="M8 13h2v4H8zm4-3h2v7h-2zm4-2h2v9h-2z"/>
+            </svg>
+            Export ID Card Data
+          </button>
+          <button onClick={()=>setShowModal(true)} style={{ display:"flex",alignItems:"center",gap:8,background:T.text,color:dark?"#0d0f1a":"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:18,height:18}}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            Register New Student
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}

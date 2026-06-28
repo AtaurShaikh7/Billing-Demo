@@ -9,15 +9,21 @@ function StatusBadge({ status }) {
   return <span className={`badge-status ${cls}`}>{status}</span>;
 }
 
+const NUM = { fontFamily: "'Roboto', sans-serif" };
+
 function PaymentModal({ student, onClose, onSuccess }) {
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState("Cash");
   const [error, setError] = useState("");
+  const [step, setStep] = useState("form"); // "form" | "sms"
+  const [smsResult, setSmsResult] = useState(null);
+  const [pendingData, setPendingData] = useState(null);
 
   function handlePay() {
     const amt = parseInt(amount);
     if (!amt || amt <= 0) { setError("Enter a valid amount"); return; }
     if (amt > student.balance) { setError(`Amount cannot exceed balance ${fmt(student.balance)}`); return; }
+
     const paymentId = `PAY${Date.now()}`;
     const payment = {
       id: paymentId,
@@ -27,7 +33,84 @@ function PaymentModal({ student, onClose, onSuccess }) {
       receiptNo: `SMC-REC-${Date.now().toString().slice(-6)}`,
     };
     const updated = recordPayment(student.id, payment);
-    onSuccess(updated, paymentId);
+    setPendingData({ updated, paymentId, amt, payment });
+
+    /* Simulate Twilio SMS dispatch */
+    setStep("sms");
+    setTimeout(() => {
+      setSmsResult("sent");
+    }, 1200);
+  }
+
+  function proceedToReceipt() {
+    onSuccess(pendingData.updated, pendingData.paymentId);
+  }
+
+  /* SMS preview message */
+  const smsText = pendingData
+    ? `Dear ${student.name.split(" ")[0]}, your fee payment of ${fmt(pendingData.amt)} has been received by St. Mary's College, Mumbra. Receipt: ${pendingData?.payment?.receiptNo}. Thank you.`
+    : "";
+
+  if (step === "sms") {
+    return (
+      <div className="modal-overlay">
+        <div className="modal">
+          <div className="modal-header">
+            <span className="modal-title">Payment Recorded</span>
+            <button className="modal-close" onClick={proceedToReceipt}>&times;</button>
+          </div>
+          <div className="modal-body">
+            {/* Payment confirmed */}
+            <div style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#dcfce7",borderRadius:8,marginBottom:18 }}>
+              <div style={{ width:32,height:32,borderRadius:"50%",background:"#16a34a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{width:16,height:16}}><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div>
+                <div style={{ fontWeight:700,color:"#15803d",fontSize:13.5 }}>Fee collected — {fmt(pendingData?.amt)}</div>
+                <div style={{ fontSize:12,color:"#166534",marginTop:2,...NUM }}>{pendingData?.payment?.receiptNo} · {mode}</div>
+              </div>
+            </div>
+
+            {/* SMS status */}
+            <div style={{ background:"#f8fafc",border:"1px solid #e0e7ff",borderRadius:10,padding:16,marginBottom:4 }}>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#3730a3" strokeWidth="2" style={{width:16,height:16}}>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span style={{ fontSize:12.5,fontWeight:700,color:"#3730a3" }}>SMS Notification — Twilio</span>
+                {smsResult === "sent"
+                  ? <span style={{ marginLeft:"auto",fontSize:11,fontWeight:700,background:"#dcfce7",color:"#15803d",padding:"2px 8px",borderRadius:20 }}>✓ Sent</span>
+                  : <span style={{ marginLeft:"auto",fontSize:11,color:"#6b7280" }}>Sending…</span>
+                }
+              </div>
+              {/* Phone */}
+              <div style={{ fontSize:11.5,color:"#6b7280",marginBottom:10,...NUM }}>
+                To: <strong style={{ color:"#0f172a" }}>+91 {student.phone}</strong>
+              </div>
+              {/* SMS bubble */}
+              <div style={{ background:"#fff",border:"1px solid #e0e7ff",borderRadius:8,padding:"10px 14px",fontSize:12.5,color:"#374151",lineHeight:1.6,position:"relative" }}>
+                <div style={{ position:"absolute",top:8,right:10,fontSize:10,color:"#9ca3af",...NUM }}>
+                  {smsResult === "sent" ? "Delivered ✓✓" : "…"}
+                </div>
+                {smsText}
+              </div>
+              <p style={{ fontSize:11,color:"#9ca3af",marginTop:8 }}>
+                Powered by Twilio · SMS charges borne by client
+              </p>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-primary" onClick={proceedToReceipt} style={{ gap:8 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15}}>
+                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+              </svg>
+              Print Receipt
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -42,9 +125,9 @@ function PaymentModal({ student, onClose, onSuccess }) {
             <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4 }}>{student.name}</div>
             <div style={{ fontSize: 12.5, color: "var(--muted)" }}>{student.rollNo} · {student.class} {student.stream}</div>
             <div style={{ display: "flex", gap: 20, marginTop: 10 }}>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Fee</div><div style={{ fontWeight: 700 }}>{fmt(student.totalFee)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Paid</div><div style={{ fontWeight: 700, color: "var(--success)" }}>{fmt(student.paidAmount)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Balance</div><div style={{ fontWeight: 700, color: "var(--danger)" }}>{fmt(student.balance)}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Fee</div><div style={{ fontWeight: 700, ...NUM }}>{fmt(student.totalFee)}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Paid</div><div style={{ fontWeight: 700, color: "var(--success)", ...NUM }}>{fmt(student.paidAmount)}</div></div>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Balance</div><div style={{ fontWeight: 700, color: "var(--danger)", ...NUM }}>{fmt(student.balance)}</div></div>
             </div>
           </div>
 
@@ -55,20 +138,31 @@ function PaymentModal({ student, onClose, onSuccess }) {
               placeholder={`Max: ${student.balance}`}
               value={amount}
               onChange={e => { setAmount(e.target.value); setError(""); }}
-              min={1} max={student.balance}
+              min={1} max={student.balance} autoFocus
             />
           </div>
-          <div className="form-group" style={{ marginBottom: 4 }}>
+          <div className="form-group" style={{ marginBottom: 12 }}>
             <label>Payment Mode</label>
             <select value={mode} onChange={e => setMode(e.target.value)}>
               {["Cash", "UPI", "NEFT", "Cheque", "DD"].map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
-          {error && <div className="error-msg" style={{ marginTop: 6 }}>{error}</div>}
+
+          {/* SMS notice */}
+          <div style={{ display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"#eff4ff",borderRadius:7,border:"1px solid #c7d7fd" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3730a3" strokeWidth="2" style={{width:14,height:14,flexShrink:0}}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span style={{ fontSize:11.5,color:"#3730a3" }}>
+              An SMS confirmation will be sent to <strong style={{...NUM}}>+91 {student.phone}</strong> via Twilio after payment.
+            </span>
+          </div>
+
+          {error && <div className="error-msg" style={{ marginTop: 10 }}>{error}</div>}
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handlePay}>Collect & Generate Receipt</button>
+          <button className="btn btn-primary" onClick={handlePay}>Collect & Send SMS</button>
         </div>
       </div>
     </div>
