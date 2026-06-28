@@ -10,7 +10,7 @@ export default function AddStudent() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "", email: "", phone: "", dob: "",
-    address: "", class: "", stream: "", academicYear: "2025–26",
+    address: "", class: "", stream: "", academicYear: "2026–27",
   });
   const [errors, setErrors] = useState({});
   const [saved, setSaved] = useState(false);
@@ -50,11 +50,11 @@ export default function AddStudent() {
         </div>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Student Enrolled!</h2>
         <p style={{ color: "var(--muted)", marginBottom: 24 }}>
-          {form.name} has been added to {form.class} {form.stream} for AY 2025–26.
+          {form.name} has been added to {form.class} {form.stream} for AY 2026–27.
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
           <button className="btn btn-primary" onClick={() => navigate("/students")}>View All Students</button>
-          <button className="btn btn-ghost" onClick={() => { setForm({ name:"",email:"",phone:"",dob:"",address:"",class:"",stream:"",academicYear:"2025–26" }); setSaved(false); setErrors({}); }}>
+          <button className="btn btn-ghost" onClick={() => { setForm({ name:"",email:"",phone:"",dob:"",address:"",class:"",stream:"",academicYear:"2026–27" }); setSaved(false); setErrors({}); }}>
             Add Another
           </button>
         </div>

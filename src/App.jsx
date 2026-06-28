@@ -191,7 +191,7 @@ function ProtectedLayout({ onLogout, dark, toggleDark }) {
         }}>
           {!sidebarOpen && <BurgerBtn onClick={() => setSidebarOpen(true)} dark={dark} />}
           <span style={{ fontSize:14, fontWeight:600, color: dark ? "#e0e7ff" : "#3730a3" }}>
-            St. Mary Junior College — Billing System
+            St. Mary Degree College — Billing System
           </span>
         </div>
 
@@ -214,7 +214,7 @@ function ProtectedLayout({ onLogout, dark, toggleDark }) {
           fontSize:11.5, color: footerTx,
           background: dark ? "#161822" : "#fff",
         }}>
-          <span>© 2025 St. Mary Junior College • System Status: <span style={{color:"#10b981",fontWeight:600}}>Operational</span></span>
+          <span>© 2026 St. Mary Degree College • System Status: <span style={{color:"#10b981",fontWeight:600}}>Operational</span></span>
           <span style={{cursor:"pointer"}}>PRIVACY POLICY</span>
         </div>
       </div>

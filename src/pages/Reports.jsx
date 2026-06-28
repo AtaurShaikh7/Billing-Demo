@@ -106,8 +106,8 @@ export default function Reports() {
   const T = tok(dark);
   const [students,setStudents]=useState([]);
   const [reportFilter,setReportFilter]=useState("All Report Types");
-  const [dateFrom,setDateFrom]=useState("2025-06-01");
-  const [dateTo,setDateTo]=useState("2025-06-30");
+  const [dateFrom,setDateFrom]=useState("2026-06-01");
+  const [dateTo,setDateTo]=useState("2026-06-30");
   const [showDatePicker,setShowDatePicker]=useState(false);
   const [pendingFrom,setPendingFrom]=useState(dateFrom);
   const [pendingTo,setPendingTo]=useState(dateTo);
@@ -135,11 +135,11 @@ export default function Reports() {
   ];
 
   const REPORTS=[
-    {name:"Q3 Fee Collection Audit",           type:"Audit",      date:"24 Jun 2025",status:"Ready"},
-    {name:"FY Junior College Tuition Summary",  type:"Revenue",    date:"22 Jun 2025",status:"Ready"},
-    {name:"Financial Aid & Concession Matching",type:"Compliance", date:"19 Jun 2025",status:"Processing"},
-    {name:"SY Science Stream Fee Report",       type:"Audit",      date:"15 Jun 2025",status:"Ready"},
-    {name:"Annual Outstanding Balance Report",  type:"Revenue",    date:"10 Jun 2025",status:"Ready"},
+    {name:"Q3 Fee Collection Audit",           type:"Audit",      date:"24 Jun 2026",status:"Ready"},
+    {name:"FY Degree College Tuition Summary",  type:"Revenue",    date:"22 Jun 2026",status:"Ready"},
+    {name:"Financial Aid & Concession Matching",type:"Compliance", date:"19 Jun 2026",status:"Processing"},
+    {name:"SY Science Stream Fee Report",       type:"Audit",      date:"15 Jun 2026",status:"Ready"},
+    {name:"Annual Outstanding Balance Report",  type:"Revenue",    date:"10 Jun 2026",status:"Ready"},
   ];
   const filteredReports=REPORTS.filter(r=>reportFilter==="All Report Types"||r.type===reportFilter);
 

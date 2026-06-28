@@ -60,9 +60,9 @@ function Avatar({ name }) {
 }
 
 const ST_STYLE = {
-  Paid:    {label:"COMPLETED",bg:"#d1fae5",color:"#065f46"},
-  Partial: {label:"PENDING",  bg:"#fef3c7",color:"#92400e"},
-  Pending: {label:"OVERDUE",  bg:"#fee2e2",color:"#991b1b"},
+  Paid:    {label:"Paid",         bg:"#dcfce7",color:"#15803d"},
+  Partial: {label:"Partial Paid", bg:"#fef9c3",color:"#92400e"},
+  Pending: {label:"Pending",      bg:"#fee2e2",color:"#b91c1c"},
 };
 function StatusBadge({ status }) {
   const s = ST_STYLE[status] || ST_STYLE.Pending;

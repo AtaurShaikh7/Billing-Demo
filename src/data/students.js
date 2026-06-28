@@ -70,7 +70,8 @@ const INITIAL_STUDENTS = Array.from({ length: 30 }, (_, i) => {
     class: cls,
     stream,
     course,
-    academicYear: "2025–26",
+    eligibilityFee: i % 4 === 0, // every 4th student has eligibility fee
+    academicYear: "2026–27",
     feeStructure: FEE_STRUCTURE[course],
     totalFee: total,
     paidAmount: paid,
@@ -122,6 +123,7 @@ export function addStudent(student) {
     payments: [],
     enrolledOn: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
     feeStructure: fee,
+    eligibilityFee: student.eligibilityFee || false,
   };
   const updated = [...students, newStudent];
   saveStudents(updated);

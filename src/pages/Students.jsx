@@ -20,9 +20,9 @@ function Avatar({ name }) {
 }
 
 const STATUS_MAP = {
-  Paid:    {label:"Active",   bg:"#dcfce7",color:"#15803d"},
-  Partial: {label:"On Leave", bg:"#ffedd5",color:"#c2410c"},
-  Pending: {label:"Overdue",  bg:"#fee2e2",color:"#b91c1c"},
+  Paid:    {label:"Paid",         bg:"#dcfce7",color:"#15803d"},
+  Partial: {label:"Partial Paid", bg:"#fef9c3",color:"#92400e"},
+  Pending: {label:"Pending",      bg:"#fee2e2",color:"#b91c1c"},
 };
 function StatusBadge({ status }) {
   const s = STATUS_MAP[status] || STATUS_MAP.Pending;
@@ -69,7 +69,48 @@ function IconBtn({ children, onClick, T }) {
 }
 
 /* ══ ADD STUDENT MODAL ══ */
-const EMPTY = { name:"",email:"",phone:"",dob:"",address:"",class:"",stream:"",course:"",academicYear:"2025–26" };
+const EMPTY = { name:"",email:"",phone:"",dob:"",address:"",class:"",stream:"",course:"",academicYear:"2026–27",eligibilityFee:false };
+
+/* ── Module-level form helpers (MUST be outside any component to avoid remount on re-render) ── */
+function modalInputStyle(T, focused, err) {
+  return {
+    width:"100%", padding:"9px 12px", boxSizing:"border-box", fontFamily:"inherit",
+    fontSize:13.5, color:T.text, outline:"none", background:T.inputBg,
+    border:`${focused?2:1}px solid ${err?T.danger:focused?T.indigo:T.inputBd}`,
+    borderRadius:8, boxShadow:focused&&!err?`0 0 0 3px ${T.indigoFaint}`:"none",
+    transition:"border .15s, box-shadow .15s",
+  };
+}
+
+function SField({ label, id, err, T, children }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+      <label htmlFor={id} style={{ fontSize:12.5, fontWeight:600, color:T.text }}>{label}</label>
+      {children}
+      {err && <span style={{ fontSize:11.5, color:T.danger }}>{err}</span>}
+    </div>
+  );
+}
+
+function TInput({ id, type="text", placeholder, value, onChange, err, T, ...rest }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input id={id} type={type} placeholder={placeholder} value={value} onChange={onChange}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+      style={modalInputStyle(T, focused, err)} {...rest} />
+  );
+}
+
+function TSelect({ id, value, onChange, err, T, children }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <select id={id} value={value} onChange={onChange}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+      style={{ ...modalInputStyle(T, focused, err), cursor:"pointer" }}>
+      {children}
+    </select>
+  );
+}
 
 function AddStudentModal({ onClose, onAdded, T }) {
   const [form,setForm] = useState(EMPTY);
@@ -82,53 +123,44 @@ function AddStudentModal({ onClose, onAdded, T }) {
   const total = fees ? fees.tuition+fees.exam+fees.lab+fees.misc : 0;
 
   function validate() {
-    const e={};
-    if(!form.name.trim()) e.name="Required";
-    if(!form.phone.trim()||!/^\d{10}$/.test(form.phone)) e.phone="Valid 10-digit number";
-    if(!form.email.trim()||!form.email.includes("@")) e.email="Valid email required";
-    if(!form.dob) e.dob="Required";
-    if(!form.stream) e.stream="Select a stream";
-    if(!form.course) e.course="Select a course";
-    if(!form.class) e.class="Select a year";
-    if(!form.address.trim()) e.address="Required";
+    const e = {};
+    if (!form.name.trim()) e.name = "Required";
+
+    // Phone: exactly 10 digits
+    if (!form.phone || !/^\d{10}$/.test(form.phone))
+      e.phone = "Enter a valid 10-digit mobile number";
+
+    if (!form.email.trim() || !form.email.includes("@"))
+      e.email = "Valid email required";
+
+    // DOB: year must be 1995–2010 for college-age students
+    if (!form.dob) {
+      e.dob = "Required";
+    } else {
+      const year = new Date(form.dob).getFullYear();
+      if (year < 1995 || year > 2010)
+        e.dob = "Year must be between 1995 and 2010";
+    }
+
+    if (!form.stream)  e.stream  = "Select a stream";
+    if (!form.course)  e.course  = "Select a course";
+    if (!form.class)   e.class   = "Select a year";
+    if (!form.address.trim()) e.address = "Required";
     return e;
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-    const errs=validate();
-    if(Object.keys(errs).length){setErrors(errs);return;}
-    addStudent(form);setSuccess(true);
-    setTimeout(()=>{onAdded();onClose();},1400);
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    addStudent(form); setSuccess(true);
+    setTimeout(() => { onAdded(); onClose(); }, 1400);
   }
 
-  const inputStyle=(focused,err)=>({
-    width:"100%",padding:"9px 12px",boxSizing:"border-box",fontFamily:"inherit",
-    fontSize:13.5,color:T.text,outline:"none",
-    background:T.inputBg,
-    border:`${focused?2:1}px solid ${err?T.danger:focused?T.indigo:T.inputBd}`,
-    borderRadius:8,boxShadow:focused&&!err?`0 0 0 3px ${T.indigoFaint}`:"none",transition:"border .15s,box-shadow .15s",
-  });
-
-  function SField({label,id,err,children}){
-    return (
-      <div style={{ display:"flex",flexDirection:"column",gap:5 }}>
-        <label htmlFor={id} style={{ fontSize:12.5,fontWeight:600,color:T.text }}>{label}</label>
-        {children}
-        {err&&<span style={{ fontSize:11.5,color:T.danger }}>{err}</span>}
-      </div>
-    );
-  }
-  function TInput({id,type="text",placeholder,value,onChange,err,...rest}){
-    const [f,setF]=useState(false);
-    return <input id={id} type={type} placeholder={placeholder} value={value} onChange={onChange}
-      onFocus={()=>setF(true)} onBlur={()=>setF(false)} style={inputStyle(f,err)} {...rest}/>;
-  }
-  function TSelect({id,value,onChange,err,children}){
-    const [f,setF]=useState(false);
-    return <select id={id} value={value} onChange={onChange}
-      onFocus={()=>setF(true)} onBlur={()=>setF(false)}
-      style={{...inputStyle(f,err),cursor:"pointer"}}>{children}</select>;
+  // Phone: allow only digits, max 10
+  function handlePhone(e) {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+    set("phone", digits);
   }
 
   return (
@@ -166,52 +198,71 @@ function AddStudentModal({ onClose, onAdded, T }) {
             <form onSubmit={handleSubmit} id="add-student-form">
               <p style={{ fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:14 }}>Personal Details</p>
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20 }}>
-                <SField label="Full Name *" err={errors.name}>
-                  <TInput id="n1" placeholder="e.g. Aryan Sharma" value={form.name} onChange={e=>set("name",e.target.value)} err={errors.name} autoFocus/>
+                <SField T={T} label="Full Name *" err={errors.name}>
+                  <TInput T={T} id="n1" placeholder="e.g. Aryan Sharma" value={form.name} onChange={e=>set("name",e.target.value)} err={errors.name} autoFocus/>
                 </SField>
-                <SField label="Date of Birth *" err={errors.dob}>
-                  <TInput id="n2" type="date" value={form.dob} onChange={e=>set("dob",e.target.value)} err={errors.dob}/>
+                <SField T={T} label="Date of Birth *" err={errors.dob}>
+                  <TInput T={T} id="n2" type="date" value={form.dob}
+                    onChange={e=>set("dob",e.target.value)}
+                    min="1995-01-01" max="2010-12-31"
+                    err={errors.dob}/>
                 </SField>
-                <SField label="Mobile Number *" err={errors.phone}>
-                  <TInput id="n3" placeholder="10-digit number" value={form.phone} onChange={e=>set("phone",e.target.value)} err={errors.phone} maxLength={10}/>
+                <SField T={T} label="Mobile Number *" err={errors.phone}>
+                  <TInput T={T} id="n3" type="tel" placeholder="10-digit mobile number"
+                    value={form.phone} onChange={handlePhone}
+                    err={errors.phone} maxLength={10} inputMode="numeric"/>
                 </SField>
-                <SField label="Email Address *" err={errors.email}>
-                  <TInput id="n4" type="email" placeholder="student@example.com" value={form.email} onChange={e=>set("email",e.target.value)} err={errors.email}/>
+                <SField T={T} label="Email Address *" err={errors.email}>
+                  <TInput T={T} id="n4" type="email" placeholder="student@example.com" value={form.email} onChange={e=>set("email",e.target.value)} err={errors.email}/>
                 </SField>
                 <div style={{ gridColumn:"span 2" }}>
-                  <SField label="Residential Address *" err={errors.address}>
+                  <SField T={T} label="Residential Address *" err={errors.address}>
                     <textarea rows={2} placeholder="House/Flat no., Area, Mumbra, Thane"
                       value={form.address} onChange={e=>set("address",e.target.value)}
-                      style={{ ...inputStyle(false,errors.address),resize:"vertical",fontFamily:"inherit" }}/>
+                      style={{ ...modalInputStyle(T,false,errors.address),resize:"vertical",fontFamily:"inherit" }}/>
                   </SField>
                 </div>
               </div>
 
               <p style={{ fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:14 }}>Academic Details</p>
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
-                <SField label="Stream *" err={errors.stream}>
-                  <TSelect id="n5" value={form.stream} onChange={e=>{ set("stream",e.target.value); set("course",""); }} err={errors.stream}>
+                <SField T={T} label="Stream *" err={errors.stream}>
+                  <TSelect T={T} id="n5" value={form.stream} onChange={e=>{ set("stream",e.target.value); set("course",""); }} err={errors.stream}>
                     <option value="">Select stream</option>
                     {STREAMS.map(s=><option key={s}>{s}</option>)}
                   </TSelect>
                 </SField>
-                <SField label="Course *" err={errors.course}>
-                  <TSelect id="n6" value={form.course} onChange={e=>set("course",e.target.value)} err={errors.course} disabled={!form.stream}>
+                <SField T={T} label="Course *" err={errors.course}>
+                  <TSelect T={T} id="n6" value={form.course} onChange={e=>set("course",e.target.value)} err={errors.course} disabled={!form.stream}>
                     <option value="">Select course</option>
                     {(STREAM_COURSES[form.stream]||[]).map(c=><option key={c}>{c}</option>)}
                   </TSelect>
                 </SField>
-                <SField label="Year *" err={errors.class}>
-                  <TSelect id="n7" value={form.class} onChange={e=>set("class",e.target.value)} err={errors.class}>
+                <SField T={T} label="Year *" err={errors.class}>
+                  <TSelect T={T} id="n7" value={form.class} onChange={e=>set("class",e.target.value)} err={errors.class}>
                     <option value="">Select year</option>
                     {CLASSES.map(c=><option key={c}>{c}</option>)}
                   </TSelect>
                 </SField>
               </div>
-              <div style={{ marginBottom:20 }}>
-                <SField label="Academic Year">
-                  <input value={form.academicYear} readOnly style={{ ...inputStyle(false,false),background:T.surfaceLow,cursor:"not-allowed",width:"160px" }}/>
+              <div style={{ marginBottom:20, display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                <SField T={T} label="Academic Year">
+                  <input value={form.academicYear} readOnly style={{ ...modalInputStyle(T,false,false),background:T.surfaceLow,cursor:"not-allowed" }}/>
                 </SField>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  <label style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Eligibility Fee Applicable</label>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, padding:"9px 14px", border:`1px solid ${T.border}`, borderRadius:8, background:T.surface }}>
+                    <button type="button" onClick={()=>set("eligibilityFee",!form.eligibilityFee)}
+                      style={{ width:44, height:24, borderRadius:999, border:"none", cursor:"pointer", flexShrink:0,
+                        background:form.eligibilityFee?"#16a34a":"#e2e8f0", position:"relative", transition:"background .2s" }}>
+                      <span style={{ position:"absolute", top:2, left:form.eligibilityFee?22:2, width:20, height:20,
+                        borderRadius:"50%", background:"#fff", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,.2)" }}/>
+                    </button>
+                    <span style={{ fontSize:13, fontWeight:600, color:form.eligibilityFee?"#15803d":"#6b7280" }}>
+                      {form.eligibilityFee ? "Yes" : "No"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {fees && (
@@ -278,7 +329,7 @@ function exportIDCardExcel(students) {
       "Mobile":         s.phone,
       "Email":          s.email,
       "Address":        s.address,
-      "Enrolled On":    s.enrolledOn || "Jun 2025",
+      "Enrolled On":    s.enrolledOn || "Jun 2026",
       "Fee Status":     s.status,
     }));
 
@@ -295,42 +346,56 @@ function exportIDCardExcel(students) {
   XLSX.writeFile(wb, `StMary_IDCard_Data_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-const DEPT_OPT   = ["All Departments","Science","Commerce","Arts"];
-const STATUS_OPT = ["All Status","Active","On Leave","Overdue"];
-const S_REV      = {"Active":"Paid","On Leave":"Partial","Overdue":"Pending"};
+const S_REV      = {"Paid":"Paid","Partial Paid":"Partial","Pending":"Pending"};
 
 export default function Students() {
   const { dark } = useTheme();
   const T = tok(dark);
-  const [students,setStudents]   = useState([]);
-  const [search,setSearch]       = useState("");
-  const [dept,setDept]           = useState("All Departments");
-  const [status,setStatus]       = useState("All Status");
-  const [page,setPage]           = useState(1);
-  const [hovRow,setHovRow]       = useState(null);
-  const [showModal,setShowModal] = useState(false);
+  const [students,setStudents]     = useState([]);
+  const [search,setSearch]         = useState("");
+  const [filterOpen,setFilterOpen] = useState(false);
+  const [fStream,setFStream]       = useState("");
+  const [fCourse,setFCourse]       = useState("");
+  const [fYear,setFYear]           = useState("");
+  const [fStatus,setFStatus]       = useState("");
+  const [page,setPage]             = useState(1);
+  const [hovRow,setHovRow]         = useState(null);
+  const [showModal,setShowModal]   = useState(false);
+  const filterRef                  = useRef();
   const navigate = useNavigate();
   const PER = 8;
 
   function load() { setStudents(getStudents()); }
   useEffect(load,[]);
 
+  /* close filter panel on outside click */
+  useEffect(()=>{
+    function handler(e){ if(filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); }
+    document.addEventListener("mousedown", handler);
+    return ()=>document.removeEventListener("mousedown", handler);
+  },[]);
+
+  const activeFilterCount = [fStream,fCourse,fYear,fStatus].filter(Boolean).length;
+
+  function clearFilters(){ setFStream(""); setFCourse(""); setFYear(""); setFStatus(""); setSearch(""); setPage(1); }
+
   const filtered = students.filter(s=>{
-    const q=search.toLowerCase();
-    const mQ=!q||s.name.toLowerCase().includes(q)||s.id.toLowerCase().includes(q)||s.rollNo.toLowerCase().includes(q);
-    const mD=dept==="All Departments"||s.stream===dept;
-    const mS=status==="All Status"||s.status===S_REV[status];
-    return mQ&&mD&&mS;
+    const q = search.toLowerCase();
+    const mQ = !q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q) || (s.course||"").toLowerCase().includes(q);
+    const mStream = !fStream || s.stream === fStream;
+    const mCourse = !fCourse || (s.course||s.stream) === fCourse;
+    const mYear   = !fYear   || s.class === fYear;
+    const mStatus = !fStatus || s.status === S_REV[fStatus];
+    return mQ && mStream && mCourse && mYear && mStatus;
   });
   const totalPages = Math.max(1,Math.ceil(filtered.length/PER));
   const paginated  = filtered.slice((page-1)*PER,page*PER);
 
   const total   = students.length;
-  const newRegs = students.filter(s=>s.enrolledOn?.includes("2025")).length;
+  const newRegs = students.filter(s=>s.enrolledOn?.includes("2026")).length;
   const syCount = students.filter(s=>s.class==="SY (12th)").length;
   const paidPct = total>0?((students.filter(s=>s.status==="Paid").length/total)*100).toFixed(1):"0.0";
 
-  const selStyle = { padding:"7px 12px",border:`1px solid ${T.border}`,borderRadius:8,fontSize:13,color:T.text,background:T.surface,outline:"none",fontFamily:"inherit",cursor:"pointer" };
 
   return (
     <div style={{ fontFamily:"'Inter','Segoe UI',sans-serif" }}>
@@ -371,27 +436,138 @@ export default function Students() {
 
       {/* Table */}
       <div style={{ background:T.surface,borderRadius:12,border:`1px solid ${T.border}`,boxShadow:T.shadow,overflow:"hidden" }}>
-        {/* Filter bar */}
-        <div style={{ padding:"14px 24px",background:T.surfaceCnt,borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12 }}>
-          <div style={{ display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
-            <div style={{ position:"relative" }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" style={{ position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",width:14,height:14 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" placeholder="Search students..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} style={{ ...selStyle,paddingLeft:30,width:200 }}/>
-            </div>
-            <select value={dept} onChange={e=>{setDept(e.target.value);setPage(1);}} style={selStyle}>
-              {DEPT_OPT.map(o=><option key={o}>{o}</option>)}
-            </select>
-            <select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);}} style={selStyle}>
-              {STATUS_OPT.map(o=><option key={o}>{o}</option>)}
-            </select>
-            {(search||dept!=="All Departments"||status!=="All Status")&&(
-              <button onClick={()=>{setSearch("");setDept("All Departments");setStatus("All Status");setPage(1);}} style={{ fontSize:12.5,color:T.indigo,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:600 }}>Clear</button>
+        {/* Search + Filter bar */}
+        <div style={{ padding:"14px 24px", background:T.surfaceCnt, borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:10 }}>
+
+          {/* Search bar — full width */}
+          <div style={{ position:"relative", flex:1 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2"
+              style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", width:15, height:15, pointerEvents:"none" }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by name, student ID, course, roll number…"
+              value={search}
+              onChange={e=>{ setSearch(e.target.value); setPage(1); }}
+              style={{
+                width:"100%", padding:"9px 36px", border:`1px solid ${T.border}`,
+                borderRadius:8, fontSize:13.5, color:T.text, background:T.surface,
+                outline:"none", fontFamily:"inherit", boxSizing:"border-box",
+              }}
+              onFocus={e=>e.target.style.borderColor=T.indigo}
+              onBlur={e=>e.target.style.borderColor=T.border}
+            />
+            {search && (
+              <button onClick={()=>{setSearch("");setPage(1);}}
+                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)",
+                  background:"none", border:"none", cursor:"pointer", color:T.muted, fontSize:16, lineHeight:1 }}>
+                ×
+              </button>
             )}
           </div>
-          <button style={{ display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontSize:13,fontWeight:700,color:T.muted,fontFamily:"inherit" }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-            More Filters
-          </button>
+
+          {/* Filter button */}
+          <div ref={filterRef} style={{ position:"relative", flexShrink:0 }}>
+            <button
+              onClick={()=>setFilterOpen(o=>!o)}
+              style={{
+                display:"flex", alignItems:"center", gap:7,
+                padding:"9px 16px", borderRadius:8, fontFamily:"inherit",
+                fontSize:13.5, fontWeight:600, cursor:"pointer",
+                background: activeFilterCount > 0 ? T.indigo : T.surface,
+                color: activeFilterCount > 0 ? "#fff" : T.text,
+                border:`1px solid ${activeFilterCount > 0 ? T.indigo : T.border}`,
+                transition:"all .15s",
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15}}>
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+              </svg>
+              Filters
+              {activeFilterCount > 0 && (
+                <span style={{ background:"rgba(255,255,255,.25)", borderRadius:99, fontSize:11, fontWeight:700, padding:"1px 6px", lineHeight:1.4 }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Dropdown panel */}
+            {filterOpen && (
+              <div style={{
+                position:"absolute", top:"calc(100% + 8px)", right:0, zIndex:100,
+                background:T.surface, border:`1px solid ${T.border}`, borderRadius:12,
+                padding:20, width:280, boxShadow:T.shadowMd,
+              }}>
+                <div style={{ fontSize:11, fontWeight:700, color:T.muted, textTransform:"uppercase", letterSpacing:".07em", marginBottom:14 }}>
+                  Filter Students
+                </div>
+
+                {/* Stream */}
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:5 }}>Stream</label>
+                  <select value={fStream} onChange={e=>{ setFStream(e.target.value); setFCourse(""); setPage(1); }}
+                    style={{ width:"100%", padding:"8px 10px", border:`1px solid ${T.border}`, borderRadius:7, fontSize:13, color:T.text, background:T.inputBg, fontFamily:"inherit", outline:"none" }}>
+                    <option value="">All Streams</option>
+                    {STREAMS.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                </div>
+
+                {/* Course */}
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:5 }}>Course</label>
+                  <select value={fCourse} onChange={e=>{ setFCourse(e.target.value); setPage(1); }}
+                    style={{ width:"100%", padding:"8px 10px", border:`1px solid ${T.border}`, borderRadius:7, fontSize:13, color:T.text, background:T.inputBg, fontFamily:"inherit", outline:"none" }}
+                    disabled={!fStream}>
+                    <option value="">All Courses</option>
+                    {(STREAM_COURSES[fStream]||Object.values(STREAM_COURSES).flat()).map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                {/* Year */}
+                <div style={{ marginBottom:12 }}>
+                  <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:5 }}>Year</label>
+                  <select value={fYear} onChange={e=>{ setFYear(e.target.value); setPage(1); }}
+                    style={{ width:"100%", padding:"8px 10px", border:`1px solid ${T.border}`, borderRadius:7, fontSize:13, color:T.text, background:T.inputBg, fontFamily:"inherit", outline:"none" }}>
+                    <option value="">All Years</option>
+                    {CLASSES.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div style={{ marginBottom:18 }}>
+                  <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:5 }}>Fee Status</label>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {["Paid","Partial Paid","Pending"].map(s=>(
+                      <button key={s} onClick={()=>{ setFStatus(fStatus===s?"":s); setPage(1); }}
+                        style={{
+                          padding:"5px 12px", borderRadius:20, fontSize:12, fontWeight:600,
+                          cursor:"pointer", border:`1px solid`, fontFamily:"inherit",
+                          background: fStatus===s ? T.indigo : T.surface,
+                          color: fStatus===s ? "#fff" : T.muted,
+                          borderColor: fStatus===s ? T.indigo : T.border,
+                          transition:"all .12s",
+                        }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={()=>{ clearFilters(); setFilterOpen(false); }}
+                    style={{ flex:1, padding:"8px", border:`1px solid ${T.border}`, borderRadius:7, background:T.surface, color:T.text, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+                    Clear All
+                  </button>
+                  <button onClick={()=>setFilterOpen(false)}
+                    style={{ flex:1, padding:"8px", border:"none", borderRadius:7, background:T.indigo, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ overflowX:"auto" }}>
@@ -418,7 +594,7 @@ export default function Students() {
                     </td>
                     <td style={{ padding:"14px 24px",color:T.muted,fontSize:13,...NUM }}>{s.id}</td>
                     <td style={{ padding:"14px 24px",color:T.muted,fontSize:14 }}>{s.course||s.stream} · {s.class}</td>
-                    <td style={{ padding:"14px 24px",color:T.muted,fontSize:14,...NUM }}>{s.enrolledOn||"Jun 2025"}</td>
+                    <td style={{ padding:"14px 24px",color:T.muted,fontSize:14,...NUM }}>{s.enrolledOn||"Jun 2026"}</td>
                     <td style={{ padding:"14px 24px" }}><StatusBadge status={s.status}/></td>
                     <td style={{ padding:"14px 24px",textAlign:"right" }} onClick={e=>e.stopPropagation()}>
                       <div style={{ display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,opacity:hovRow===idx?1:0,transition:"opacity .15s" }}>

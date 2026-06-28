@@ -90,14 +90,14 @@ export default function Settings({ onLogout }) {
           </div>
         </div>
         <InfoRow label="Version"      value="v1.0.0"        mono />
-        <InfoRow label="Build Date"   value="24 Jun 2025"   mono />
+        <InfoRow label="Build Date"   value="24 Jun 2026"   mono />
         <InfoRow label="Environment"  value="Production" />
         <InfoRow label="License"      value="Single Instance" />
         <InfoRow label="Developed by" value="MainlyDigital" />
         <InfoRow label="Contact"      value="info@mainlydigital.in" />
         <div style={{ padding: "13px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 13.5, color: T.muted, fontWeight: 500 }}>Academic Year</span>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: T.text, ...NUM }}>2025–26</span>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: T.text, ...NUM }}>2026–27</span>
         </div>
       </div>
     ),
@@ -115,10 +115,10 @@ export default function Settings({ onLogout }) {
         </div>
         <InfoRow label="Username"    value="admin" mono />
         <InfoRow label="Role"        value="Administrator" />
-        <InfoRow label="College"     value="St. Mary Junior College" />
+        <InfoRow label="College"     value="St. Mary Degree College" />
         <InfoRow label="Location"    value="Mumbra, Thane" />
         <InfoRow label="Email"       value="admin@stmarymumbra.edu.in" />
-        <InfoRow label="Last Login"  value="24 Jun 2025, 5:30 PM" mono />
+        <InfoRow label="Last Login"  value="28 Jun 2026, 5:30 PM" mono />
         <InfoRow label="Session"     value="Active" />
         <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${T.border}` }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Danger Zone</p>

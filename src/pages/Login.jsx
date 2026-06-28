@@ -94,7 +94,7 @@ export default function Login() {
                 Login Portal
               </div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 6 }}>
-                St. Mary Junior College<br />Billing & Fee Management System
+                St. Mary Degree College<br />Billing & Fee Management System
               </div>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function Login() {
         fontSize: 11.5, color: "rgba(255,255,255,.4)",
         maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box",
       }}>
-        <span>© 2025 St. Mary Junior College. Authorized Access Only.</span>
+        <span>© 2026 St. Mary Degree College. Authorized Access Only.</span>
         <div style={{ display: "flex", gap: 16 }}>
           <span style={{ cursor: "pointer" }}>Privacy Policy</span>
           <span style={{ cursor: "pointer" }}>Security Standards</span>

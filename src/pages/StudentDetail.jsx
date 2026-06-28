@@ -4,20 +4,65 @@ import { getStudents, recordPayment } from "../data/students";
 
 function fmt(n) { return "₹" + n.toLocaleString("en-IN"); }
 
+const STATUS_LABELS = { Paid:"Paid", Partial:"Partial Paid", Pending:"Pending" };
+const STATUS_STYLES = {
+  Paid:    {bg:"#dcfce7",color:"#15803d"},
+  Partial: {bg:"#fef9c3",color:"#92400e"},
+  Pending: {bg:"#fee2e2",color:"#b91c1c"},
+};
 function StatusBadge({ status }) {
-  const cls = status === "Paid" ? "badge-paid" : status === "Partial" ? "badge-partial" : "badge-pending";
-  return <span className={`badge-status ${cls}`}>{status}</span>;
+  const s = STATUS_STYLES[status] || STATUS_STYLES.Pending;
+  return (
+    <span style={{ padding:"3px 10px",borderRadius:999,fontSize:11.5,fontWeight:700,background:s.bg,color:s.color }}>
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
 }
 
 const NUM = { fontFamily: "'Roboto', sans-serif" };
 
+/* Fee note labels shown on receipt */
+const FEE_NOTE_KEYS = [
+  { key: "enrollment", label: "Enrollment Fee" },
+  { key: "eligibility", label: "Eligibility Fee" },
+  { key: "exam",       label: "Exam Fee"         },
+];
+
+const DEFAULT_NOTES = { enrollment: false, eligibility: false, exam: false };
+
+/* Yes/No toggle switch */
+function Toggle({ value, onChange, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(!value)}
+      style={{
+        width: 48, height: 26, borderRadius: 999, border: "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: disabled ? "#d1d5db" : value ? "#16a34a" : "#e2e8f0",
+        position: "relative", transition: "background .2s", flexShrink: 0,
+        opacity: disabled ? 0.55 : 1,
+      }}
+    >
+      <span style={{
+        position: "absolute", top: 3, left: value && !disabled ? 25 : 3,
+        width: 20, height: 20, borderRadius: "50%", background: "#fff",
+        transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)",
+      }} />
+    </button>
+  );
+}
+
 function PaymentModal({ student, onClose, onSuccess }) {
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState("Cash");
+  const [feeNotes, setFeeNotes] = useState({ ...DEFAULT_NOTES });
   const [error, setError] = useState("");
   const [step, setStep] = useState("form"); // "form" | "sms"
   const [smsResult, setSmsResult] = useState(null);
   const [pendingData, setPendingData] = useState(null);
+
+  function toggleNote(key, val) { setFeeNotes(n => ({ ...n, [key]: val })); }
 
   function handlePay() {
     const amt = parseInt(amount);
@@ -30,25 +75,21 @@ function PaymentModal({ student, onClose, onSuccess }) {
       date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
       amount: amt,
       mode,
+      feeNotes: { ...feeNotes },
       receiptNo: `SMC-REC-${Date.now().toString().slice(-6)}`,
     };
     const updated = recordPayment(student.id, payment);
     setPendingData({ updated, paymentId, amt, payment });
-
-    /* Simulate Twilio SMS dispatch */
     setStep("sms");
-    setTimeout(() => {
-      setSmsResult("sent");
-    }, 1200);
+    setTimeout(() => setSmsResult("sent"), 1200);
   }
 
   function proceedToReceipt() {
     onSuccess(pendingData.updated, pendingData.paymentId);
   }
 
-  /* SMS preview message */
   const smsText = pendingData
-    ? `Dear ${student.name.split(" ")[0]}, your fee payment of ${fmt(pendingData.amt)} has been received by St. Mary's College, Mumbra. Receipt: ${pendingData?.payment?.receiptNo}. Thank you.`
+    ? `Dear ${student.name.split(" ")[0]}, your fee payment of ${fmt(pendingData.amt)} has been received by St. Mary Degree College, Mumbra. Receipt: ${pendingData?.payment?.receiptNo}. Thank you.`
     : "";
 
   if (step === "sms") {
@@ -60,7 +101,6 @@ function PaymentModal({ student, onClose, onSuccess }) {
             <button className="modal-close" onClick={proceedToReceipt}>&times;</button>
           </div>
           <div className="modal-body">
-            {/* Payment confirmed */}
             <div style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#dcfce7",borderRadius:8,marginBottom:18 }}>
               <div style={{ width:32,height:32,borderRadius:"50%",background:"#16a34a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" style={{width:16,height:16}}><polyline points="20 6 9 17 4 12"/></svg>
@@ -70,8 +110,6 @@ function PaymentModal({ student, onClose, onSuccess }) {
                 <div style={{ fontSize:12,color:"#166534",marginTop:2,...NUM }}>{pendingData?.payment?.receiptNo} · {mode}</div>
               </div>
             </div>
-
-            {/* SMS status */}
             <div style={{ background:"#f8fafc",border:"1px solid #e0e7ff",borderRadius:10,padding:16,marginBottom:4 }}>
               <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#3730a3" strokeWidth="2" style={{width:16,height:16}}>
@@ -80,23 +118,18 @@ function PaymentModal({ student, onClose, onSuccess }) {
                 <span style={{ fontSize:12.5,fontWeight:700,color:"#3730a3" }}>SMS Notification</span>
                 {smsResult === "sent"
                   ? <span style={{ marginLeft:"auto",fontSize:11,fontWeight:700,background:"#dcfce7",color:"#15803d",padding:"2px 8px",borderRadius:20 }}>✓ Sent</span>
-                  : <span style={{ marginLeft:"auto",fontSize:11,color:"#6b7280" }}>Sending…</span>
-                }
+                  : <span style={{ marginLeft:"auto",fontSize:11,color:"#6b7280" }}>Sending…</span>}
               </div>
-              {/* Phone */}
               <div style={{ fontSize:11.5,color:"#6b7280",marginBottom:10,...NUM }}>
                 To: <strong style={{ color:"#0f172a" }}>+91 {student.phone}</strong>
               </div>
-              {/* SMS bubble */}
               <div style={{ background:"#fff",border:"1px solid #e0e7ff",borderRadius:8,padding:"10px 14px",fontSize:12.5,color:"#374151",lineHeight:1.6,position:"relative" }}>
                 <div style={{ position:"absolute",top:8,right:10,fontSize:10,color:"#9ca3af",...NUM }}>
                   {smsResult === "sent" ? "Delivered ✓✓" : "…"}
                 </div>
                 {smsText}
               </div>
-              <p style={{ fontSize:11,color:"#9ca3af",marginTop:8 }}>
-                SMS sent to student's registered mobile number
-              </p>
+              <p style={{ fontSize:11,color:"#9ca3af",marginTop:8 }}>SMS sent to student's registered mobile number</p>
             </div>
           </div>
           <div className="modal-footer">
@@ -115,37 +148,71 @@ function PaymentModal({ student, onClose, onSuccess }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal">
+      <div className="modal" style={{ maxWidth: 500 }}>
         <div className="modal-header">
           <span className="modal-title">Record Payment</span>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
-          <div style={{ background: "var(--bg)", borderRadius: 8, padding: 14, marginBottom: 18 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4 }}>{student.name}</div>
-            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>{student.rollNo} · {student.class} {student.stream}</div>
-            <div style={{ display: "flex", gap: 20, marginTop: 10 }}>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Total Fee</div><div style={{ fontWeight: 700, ...NUM }}>{fmt(student.totalFee)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Paid</div><div style={{ fontWeight: 700, color: "var(--success)", ...NUM }}>{fmt(student.paidAmount)}</div></div>
-              <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase" }}>Balance</div><div style={{ fontWeight: 700, color: "var(--danger)", ...NUM }}>{fmt(student.balance)}</div></div>
+          {/* Student summary */}
+          <div style={{ background:"var(--bg)",borderRadius:8,padding:14,marginBottom:18 }}>
+            <div style={{ fontSize:13.5,fontWeight:700,marginBottom:4 }}>{student.name}</div>
+            <div style={{ fontSize:12.5,color:"var(--muted)" }}>{student.course||student.stream} · {student.class}</div>
+            <div style={{ display:"flex",gap:20,marginTop:10 }}>
+              <div><div style={{ fontSize:11,color:"var(--muted)",fontWeight:600,textTransform:"uppercase" }}>Total Fee</div><div style={{ fontWeight:700,...NUM }}>{fmt(student.totalFee)}</div></div>
+              <div><div style={{ fontSize:11,color:"var(--muted)",fontWeight:600,textTransform:"uppercase" }}>Paid</div><div style={{ fontWeight:700,color:"var(--success)",...NUM }}>{fmt(student.paidAmount)}</div></div>
+              <div><div style={{ fontSize:11,color:"var(--muted)",fontWeight:600,textTransform:"uppercase" }}>Balance</div><div style={{ fontWeight:700,color:"var(--danger)",...NUM }}>{fmt(student.balance)}</div></div>
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 14 }}>
+          {/* Amount + mode */}
+          <div className="form-group" style={{ marginBottom:14 }}>
             <label>Payment Amount (₹) *</label>
-            <input
-              type="number"
-              placeholder={`Max: ${student.balance}`}
-              value={amount}
-              onChange={e => { setAmount(e.target.value); setError(""); }}
-              min={1} max={student.balance} autoFocus
-            />
+            <input type="number" placeholder={`Max: ${student.balance}`} value={amount}
+              onChange={e=>{setAmount(e.target.value);setError("");}} min={1} max={student.balance} autoFocus/>
           </div>
-          <div className="form-group" style={{ marginBottom: 12 }}>
+          <div className="form-group" style={{ marginBottom:18 }}>
             <label>Payment Mode</label>
-            <select value={mode} onChange={e => setMode(e.target.value)}>
-              {["Cash", "UPI", "NEFT", "Cheque", "DD"].map(m => <option key={m}>{m}</option>)}
+            <select value={mode} onChange={e=>setMode(e.target.value)}>
+              {["Cash","UPI","NEFT","Cheque","DD"].map(m=><option key={m}>{m}</option>)}
             </select>
+          </div>
+
+          {/* Fee note toggles */}
+          <div style={{ borderTop:"1px solid var(--border)",paddingTop:16,marginBottom:14 }}>
+            <div style={{ fontSize:12,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:12 }}>
+              Fee Notes (for receipt)
+            </div>
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+              {FEE_NOTE_KEYS.map(({ key, label }) => {
+                const isEnrollment = key === "enrollment";
+                const isEligibility = key === "eligibility";
+                const isFY = student.class === "FY (First Year)";
+                const disabled =
+                  (isEnrollment && !isFY) ||
+                  (isEligibility && !student.eligibilityFee);
+                const reason =
+                  isEnrollment && !isFY ? "Only for FY students" :
+                  isEligibility && !student.eligibilityFee ? "Not applicable for this student" : "";
+                return (
+                  <div key={key} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background: disabled?"#f9fafb":"var(--bg)",borderRadius:8,border:`1px solid ${disabled?"#e5e7eb":"var(--border)"}` }}>
+                    <div>
+                      <span style={{ fontSize:13.5,fontWeight:500,color:disabled?"#9ca3af":"var(--text)" }}>{label}</span>
+                      {reason && <div style={{ fontSize:11,color:"#9ca3af",marginTop:2 }}>{reason}</div>}
+                    </div>
+                    <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                      {!disabled && (
+                        <span style={{ fontSize:12,fontWeight:700,color:feeNotes[key]?"#16a34a":"#dc2626" }}>
+                          {feeNotes[key] ? "Yes" : "No"}
+                        </span>
+                      )}
+                      {disabled && <span style={{ fontSize:12,fontWeight:600,color:"#9ca3af" }}>N/A</span>}
+                      <Toggle value={feeNotes[key]} onChange={val=>toggleNote(key,val)} disabled={disabled}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* SMS notice */}
@@ -154,7 +221,7 @@ function PaymentModal({ student, onClose, onSuccess }) {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
             <span style={{ fontSize:11.5,color:"#3730a3" }}>
-              An SMS confirmation will be sent to <strong style={{...NUM}}>+91 {student.phone}</strong> after payment is recorded.
+              SMS will be sent to <strong style={NUM}>+91 {student.phone}</strong> after payment is recorded.
             </span>
           </div>
 
@@ -179,7 +246,7 @@ function SmsResendButton({ student, payment }) {
     setTimeout(() => setStatus("idle"), 4000);
   }
 
-  const smsText = `Dear ${student.name.split(" ")[0]}, your fee payment of ₹${payment.amount.toLocaleString("en-IN")} on ${payment.date} (${payment.receiptNo}) has been recorded by St. Mary's College, Mumbra.`;
+  const smsText = `Dear ${student.name.split(" ")[0]}, your fee payment of ₹${payment.amount.toLocaleString("en-IN")} on ${payment.date} (${payment.receiptNo}) has been recorded by St. Mary Degree College, Mumbra.`;
 
   if (status === "sent") {
     return (
@@ -264,7 +331,7 @@ export default function StudentDetail() {
           {student.balance > 0 && (
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 16, height: 16 }}>
-                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                <path d="M6 3h12M6 8h12M6 13l8 8M6 13h3a6 6 0 0 0 0-5H6"/>
               </svg>
               Collect Fee
             </button>
@@ -316,7 +383,8 @@ export default function StudentDetail() {
                 { label: "Mobile",        value: student.phone,        span: 1 },
                 { label: "Class",         value: student.class,        span: 1 },
                 { label: "Stream",        value: student.stream,       span: 1 },
-                { label: "Course",        value: student.course || "—", span: 1 },
+                { label: "Course",        value: student.course || "—",                      span: 1 },
+                { label: "Eligibility Fee", value: student.eligibilityFee ? "Applicable" : "Not Applicable", span: 1 },
                 { label: "Academic Year", value: student.academicYear, span: 1 },
                 { label: "Enrolled On",   value: student.enrolledOn,   span: 1 },
                 { label: "Email",         value: student.email,        span: 3 },
