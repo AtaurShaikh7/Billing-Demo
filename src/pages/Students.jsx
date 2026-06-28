@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getStudents, addStudent, FEE_STRUCTURE, STREAMS, CLASSES } from "../data/students";
+import { getStudents, addStudent, FEE_STRUCTURE, STREAMS, CLASSES, STREAM_COURSES } from "../data/students";
 import { useTheme } from "../App";
 import { tok } from "../theme";
 import * as XLSX from "xlsx";
@@ -69,7 +69,7 @@ function IconBtn({ children, onClick, T }) {
 }
 
 /* ══ ADD STUDENT MODAL ══ */
-const EMPTY = { name:"",email:"",phone:"",dob:"",address:"",class:"",stream:"",academicYear:"2025–26" };
+const EMPTY = { name:"",email:"",phone:"",dob:"",address:"",class:"",stream:"",course:"",academicYear:"2025–26" };
 
 function AddStudentModal({ onClose, onAdded, T }) {
   const [form,setForm] = useState(EMPTY);
@@ -78,7 +78,7 @@ function AddStudentModal({ onClose, onAdded, T }) {
   const overlayRef = useRef();
 
   function set(k,v) { setForm(f=>({...f,[k]:v})); setErrors(e=>({...e,[k]:""})); }
-  const fees = form.stream ? FEE_STRUCTURE[form.stream] : null;
+  const fees = form.course ? FEE_STRUCTURE[form.course] : null;
   const total = fees ? fees.tuition+fees.exam+fees.lab+fees.misc : 0;
 
   function validate() {
@@ -87,8 +87,9 @@ function AddStudentModal({ onClose, onAdded, T }) {
     if(!form.phone.trim()||!/^\d{10}$/.test(form.phone)) e.phone="Valid 10-digit number";
     if(!form.email.trim()||!form.email.includes("@")) e.email="Valid email required";
     if(!form.dob) e.dob="Required";
-    if(!form.class) e.class="Select a class";
     if(!form.stream) e.stream="Select a stream";
+    if(!form.course) e.course="Select a course";
+    if(!form.class) e.class="Select a year";
     if(!form.address.trim()) e.address="Required";
     return e;
   }
@@ -188,24 +189,34 @@ function AddStudentModal({ onClose, onAdded, T }) {
 
               <p style={{ fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:14 }}>Academic Details</p>
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20 }}>
-                <SField label="Class *" err={errors.class}>
-                  <TSelect id="n5" value={form.class} onChange={e=>set("class",e.target.value)} err={errors.class}>
-                    <option value="">Select</option>{CLASSES.map(c=><option key={c}>{c}</option>)}
-                  </TSelect>
-                </SField>
                 <SField label="Stream *" err={errors.stream}>
-                  <TSelect id="n6" value={form.stream} onChange={e=>set("stream",e.target.value)} err={errors.stream}>
-                    <option value="">Select</option>{STREAMS.map(s=><option key={s}>{s}</option>)}
+                  <TSelect id="n5" value={form.stream} onChange={e=>{ set("stream",e.target.value); set("course",""); }} err={errors.stream}>
+                    <option value="">Select stream</option>
+                    {STREAMS.map(s=><option key={s}>{s}</option>)}
                   </TSelect>
                 </SField>
+                <SField label="Course *" err={errors.course}>
+                  <TSelect id="n6" value={form.course} onChange={e=>set("course",e.target.value)} err={errors.course} disabled={!form.stream}>
+                    <option value="">Select course</option>
+                    {(STREAM_COURSES[form.stream]||[]).map(c=><option key={c}>{c}</option>)}
+                  </TSelect>
+                </SField>
+                <SField label="Year *" err={errors.class}>
+                  <TSelect id="n7" value={form.class} onChange={e=>set("class",e.target.value)} err={errors.class}>
+                    <option value="">Select year</option>
+                    {CLASSES.map(c=><option key={c}>{c}</option>)}
+                  </TSelect>
+                </SField>
+              </div>
+              <div style={{ marginBottom:20 }}>
                 <SField label="Academic Year">
-                  <input value={form.academicYear} readOnly style={{ ...inputStyle(false,false),background:T.surfaceLow,cursor:"not-allowed" }}/>
+                  <input value={form.academicYear} readOnly style={{ ...inputStyle(false,false),background:T.surfaceLow,cursor:"not-allowed",width:"160px" }}/>
                 </SField>
               </div>
 
               {fees && (
                 <div style={{ background:T.surfaceLow,borderRadius:10,padding:"16px 18px",border:`1px solid ${T.border}` }}>
-                  <p style={{ fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12 }}>Fee Structure — {form.stream}</p>
+                  <p style={{ fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:12 }}>Fee Structure — {form.course}</p>
                   <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 32px",fontSize:13 }}>
                     {[["Tuition Fee",fees.tuition],["Examination Fee",fees.exam],...(fees.lab>0?[["Lab / Practical Fee",fees.lab]]:[]),["Library & Misc.",fees.misc]]
                       .map(([lbl,val])=>(
@@ -245,14 +256,14 @@ function AddStudentModal({ onClose, onAdded, T }) {
 function exportIDCardExcel(students) {
   const wb = XLSX.utils.book_new();
 
-  const categories = [
-    { label: "FY Science",   filter: s => s.class === "FY (11th)" && s.stream === "Science" },
-    { label: "FY Commerce",  filter: s => s.class === "FY (11th)" && s.stream === "Commerce" },
-    { label: "FY Arts",      filter: s => s.class === "FY (11th)" && s.stream === "Arts" },
-    { label: "SY Science",   filter: s => s.class === "SY (12th)" && s.stream === "Science" },
-    { label: "SY Commerce",  filter: s => s.class === "SY (12th)" && s.stream === "Commerce" },
-    { label: "SY Arts",      filter: s => s.class === "SY (12th)" && s.stream === "Arts" },
-  ];
+  const allCourses = ["BSc","BSc IT","BSc CS","BCom","BMS","BAF","BA"];
+  const allYears   = ["FY (First Year)","SY (Second Year)","TY (Third Year)"];
+  const categories = allCourses.flatMap(course =>
+    allYears.map(yr => ({
+      label:  `${yr.slice(0,2)} ${course}`,
+      filter: s => (s.course||s.stream) === course && s.class === yr,
+    }))
+  );
 
   categories.forEach(({ label, filter }) => {
     const rows = students.filter(filter).map((s, i) => ({
@@ -262,6 +273,7 @@ function exportIDCardExcel(students) {
       "Full Name":      s.name,
       "Class":          s.class,
       "Stream":         s.stream,
+      "Course":         s.course || s.stream,
       "Date of Birth":  s.dob,
       "Mobile":         s.phone,
       "Email":          s.email,
@@ -405,7 +417,7 @@ export default function Students() {
                       </div>
                     </td>
                     <td style={{ padding:"14px 24px",color:T.muted,fontSize:13,...NUM }}>{s.id}</td>
-                    <td style={{ padding:"14px 24px",color:T.muted,fontSize:14 }}>{s.stream} · {s.class}</td>
+                    <td style={{ padding:"14px 24px",color:T.muted,fontSize:14 }}>{s.course||s.stream} · {s.class}</td>
                     <td style={{ padding:"14px 24px",color:T.muted,fontSize:14,...NUM }}>{s.enrolledOn||"Jun 2025"}</td>
                     <td style={{ padding:"14px 24px" }}><StatusBadge status={s.status}/></td>
                     <td style={{ padding:"14px 24px",textAlign:"right" }} onClick={e=>e.stopPropagation()}>

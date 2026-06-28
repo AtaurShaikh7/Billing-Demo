@@ -77,7 +77,7 @@ function PaymentModal({ student, onClose, onSuccess }) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="#3730a3" strokeWidth="2" style={{width:16,height:16}}>
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
-                <span style={{ fontSize:12.5,fontWeight:700,color:"#3730a3" }}>SMS Notification — Twilio</span>
+                <span style={{ fontSize:12.5,fontWeight:700,color:"#3730a3" }}>SMS Notification</span>
                 {smsResult === "sent"
                   ? <span style={{ marginLeft:"auto",fontSize:11,fontWeight:700,background:"#dcfce7",color:"#15803d",padding:"2px 8px",borderRadius:20 }}>✓ Sent</span>
                   : <span style={{ marginLeft:"auto",fontSize:11,color:"#6b7280" }}>Sending…</span>
@@ -95,7 +95,7 @@ function PaymentModal({ student, onClose, onSuccess }) {
                 {smsText}
               </div>
               <p style={{ fontSize:11,color:"#9ca3af",marginTop:8 }}>
-                Powered by Twilio · SMS charges borne by client
+                SMS sent to student's registered mobile number
               </p>
             </div>
           </div>
@@ -154,7 +154,7 @@ function PaymentModal({ student, onClose, onSuccess }) {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
             <span style={{ fontSize:11.5,color:"#3730a3" }}>
-              An SMS confirmation will be sent to <strong style={{...NUM}}>+91 {student.phone}</strong> via Twilio after payment.
+              An SMS confirmation will be sent to <strong style={{...NUM}}>+91 {student.phone}</strong> after payment is recorded.
             </span>
           </div>
 
@@ -166,6 +166,49 @@ function PaymentModal({ student, onClose, onSuccess }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Send SMS button for payment history ── */
+function SmsResendButton({ student, payment }) {
+  const [status, setStatus] = useState("idle"); // idle | sending | sent
+
+  function sendSms() {
+    setStatus("sending");
+    setTimeout(() => setStatus("sent"), 1200);
+    setTimeout(() => setStatus("idle"), 4000);
+  }
+
+  const smsText = `Dear ${student.name.split(" ")[0]}, your fee payment of ₹${payment.amount.toLocaleString("en-IN")} on ${payment.date} (${payment.receiptNo}) has been recorded by St. Mary's College, Mumbra.`;
+
+  if (status === "sent") {
+    return (
+      <span style={{
+        display:"inline-flex", alignItems:"center", gap:5,
+        fontSize:12, fontWeight:600, color:"#15803d",
+        background:"#dcfce7", borderRadius:6, padding:"4px 10px",
+      }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:12,height:12}}>
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        SMS Sent
+      </span>
+    );
+  }
+
+  return (
+    <button
+      className="btn btn-ghost btn-sm"
+      onClick={sendSms}
+      disabled={status === "sending"}
+      title={smsText}
+      style={{ display:"flex", alignItems:"center", gap:5, color:"#3730a3", borderColor:"#c7d7fd" }}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:13,height:13}}>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      {status === "sending" ? "Sending…" : "Send SMS"}
+    </button>
   );
 }
 
@@ -273,6 +316,7 @@ export default function StudentDetail() {
                 { label: "Mobile",        value: student.phone,        span: 1 },
                 { label: "Class",         value: student.class,        span: 1 },
                 { label: "Stream",        value: student.stream,       span: 1 },
+                { label: "Course",        value: student.course || "—", span: 1 },
                 { label: "Academic Year", value: student.academicYear, span: 1 },
                 { label: "Enrolled On",   value: student.enrolledOn,   span: 1 },
                 { label: "Email",         value: student.email,        span: 3 },
@@ -319,7 +363,7 @@ export default function StudentDetail() {
                       <th>Date</th>
                       <th>Amount</th>
                       <th>Mode</th>
-                      <th>Action</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -330,9 +374,12 @@ export default function StudentDetail() {
                         <td style={{ fontWeight: 700, color: "var(--success)" }}>{fmt(p.amount)}</td>
                         <td>{p.mode}</td>
                         <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/receipt/${student.id}/${p.id}`)}>
-                            Print Receipt
-                          </button>
+                          <div style={{ display:"flex", gap:6 }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/receipt/${student.id}/${p.id}`)}>
+                              Print Receipt
+                            </button>
+                            <SmsResendButton student={student} payment={p} />
+                          </div>
                         </td>
                       </tr>
                     ))}
